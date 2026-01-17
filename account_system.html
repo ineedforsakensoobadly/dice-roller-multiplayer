@@ -199,6 +199,20 @@
       <div class="form-group">
         <label for="profilePicture">Profile Picture (optional)</label>
         <input type="file" id="profilePicture" accept="image/*" onchange="previewProfilePicture(event)">
+        <link rel="icon" href="assets/dice-coin.png" type="image/png">
+        <link rel="icon" href="assets/super-dicer.png" type="image/png">
+        <link rel="icon" href="assets/luck-potion.png" type="image/png">
+        <link rel="icon" href="assets/lil-god.png" type="image/png">
+        <link rel="icon" href="assets/multi.png" type="image/png">
+        <link rel="icon" href="assets/luck.png" type="image/png">
+        <link rel="icon" href="assets/soldier.png" type="image/png">
+        <link rel="icon" href="assets/dice-coin.png" type="image/png">
+        <link rel="icon" href="assets/map1.png" type="image/png">
+        <link rel="icon" href="assets/67.mp3" type="audio/mpeg">
+        <link rel="icon" href="assets/lil-god.mp3" type="audio/mpeg">
+        <link rel="icon" href="assets/tuff-thing.mp3" type="audio/mpeg">
+        <link rel="icon" href="assets/NA.mp3" type="audio/mpeg">
+        <link rel="icon" href="assets/minecraft_click.mp3" type="audio/mpeg">
       </div>
       
       <button class="btn" onclick="register()">Create Account</button>
@@ -236,86 +250,70 @@
   </div>
 
   <script>
-    // Mock database using localStorage
-    class MockDatabase {
+    // Server API integration
+    class ServerAPI {
       constructor() {
-        this.users = JSON.parse(localStorage.getItem('diceUsers') || '{}');
+        this.baseURL = window.location.origin;
+        this.token = localStorage.getItem('authToken');
       }
 
-      save() {
-        localStorage.setItem('diceUsers', JSON.stringify(this.users));
-      }
-
-      userExists(username) {
-        return this.users.hasOwnProperty(username);
-      }
-
-      createUser(username, password, profilePicture = null) {
-        if (this.userExists(username)) {
-          return { success: false, error: 'Username already exists' };
-        }
-
-        this.users[username] = {
-          password: this.hashPassword(password),
-          profilePicture: profilePicture,
-          createdAt: new Date().toISOString(),
-          gameData: {
-            coins: 0,
-            achievements: [],
-            ownedTracks: [],
-            // Add other game data as needed
+      async request(endpoint, data = {}) {
+        try {
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+          
+          if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
           }
-        };
 
-        this.save();
-        return { success: true };
-      }
-
-      authenticate(username, password) {
-        if (!this.userExists(username)) {
-          return { success: false, error: 'User not found' };
+          const response = await fetch(`${this.baseURL}/api/${endpoint}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(data)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          return await response.json();
+        } catch (error) {
+          console.error('API Error:', error);
+          return { success: false, error: 'Network error occurred' };
         }
+      }
 
-        const user = this.users[username];
-        if (user.password !== this.hashPassword(password)) {
-          return { success: false, error: 'Incorrect password' };
+      async createUser(username, password, profilePicture = null) {
+        return await this.request('register', { username, password, profilePicture });
+      }
+
+      async authenticate(username, password) {
+        const result = await this.request('login', { username, password });
+        
+        if (result.success && result.token) {
+          this.token = result.token;
+          localStorage.setItem('authToken', this.token);
         }
-
-        return { success: true, user: this.sanitizeUser(user) };
+        
+        return result;
       }
 
-      updateUser(username, updates) {
-        if (!this.userExists(username)) {
-          return { success: false, error: 'User not found' };
-        }
-
-        this.users[username] = { ...this.users[username], ...updates };
-        this.save();
-        return { success: true };
+      async updateUser(username, updates) {
+        return await this.request('update-user', { username, ...updates });
       }
 
-      deleteUser(username) {
-        if (!this.userExists(username)) {
-          return { success: false, error: 'User not found' };
-        }
-
-        delete this.users[username];
-        this.save();
-        return { success: true };
+      async deleteUser(username) {
+        return await this.request('delete-user', { username });
       }
 
-      hashPassword(password) {
-        // Simple hash for demo - in production use proper hashing
-        return btoa(password + 'dice_salt');
-      }
-
-      sanitizeUser(user) {
-        const { password, ...safeUser } = user;
-        return safeUser;
+      logout() {
+        this.token = null;
+        localStorage.removeItem('authToken');
       }
     }
 
-    const db = new MockDatabase();
+    const api = new ServerAPI();
     let currentUser = null;
     let tempProfilePicture = null;
 
@@ -376,19 +374,14 @@
       }
     }
 
-    function updateProfilePicture(event) {
+    async function updateProfilePicture(event) {
       const file = event.target.files[0];
       if (file && file.type.startsWith('image/')) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          const result = db.updateUser(currentUser.username, { profilePicture: e.target.result });
-          if (result.success) {
-            currentUser.profilePicture = e.target.result;
-            displayUserInfo();
-            showSuccess('account', 'Profile picture updated!');
-          } else {
-            showError('account', result.error);
-          }
+        reader.onload = async function(e) {
+          tempProfilePicture = e.target.result;
+          const preview = document.getElementById('profilePreview');
+          preview.innerHTML = `<img src="${e.target.result}" alt="Profile">`;
         };
         reader.readAsDataURL(file);
       }
@@ -407,7 +400,7 @@
       }
     }
 
-    function register() {
+    async function register() {
       clearMessages();
 
       const username = document.getElementById('registerUsername').value.trim();
@@ -428,7 +421,7 @@
         return;
       }
 
-      const result = db.createUser(username, password, tempProfilePicture);
+      const result = await api.createUser(username, password, tempProfilePicture);
       
       if (result.success) {
         showSuccess('register', 'Account created successfully! Please login.');
@@ -442,11 +435,11 @@
           document.getElementById('profilePreview').innerHTML = '<div class="placeholder">👤</div>';
         }, 1500);
       } else {
-        showError('register', result.error);
+        showError('register', result.error || 'Registration failed');
       }
     }
 
-    function login() {
+    async function login() {
       clearMessages();
 
       const username = document.getElementById('loginUsername').value.trim();
@@ -457,7 +450,7 @@
         return;
       }
 
-      const result = db.authenticate(username, password);
+      const result = await api.authenticate(username, password);
       
       if (result.success) {
         currentUser = result.user;
@@ -467,44 +460,44 @@
           showAccount();
         }, 1000);
       } else {
-        showError('login', result.error);
+        showError('login', result.error || 'Login failed');
       }
     }
 
-    function logout() {
-      currentUser = null;
-      localStorage.removeItem('currentUser');
-      showLogin();
-      clearMessages();
+    async function logout() {
+      const result = await api.logout(currentUser.username);
+      if (result.success) {
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        window.location.href = '/';
+      } else {
+        showError('account', result.error || 'Failed to logout');
+      }
     }
 
-    function deleteAccount() {
+    async function deleteAccount() {
       if (!currentUser) return;
 
       if (confirm('⚠️ WARNING: This will permanently delete your account and all game data. This action cannot be undone!\n\nAre you sure you want to delete your account?')) {
-        const result = db.deleteUser(currentUser.username);
+        const result = await api.deleteUser(currentUser.username);
         
         if (result.success) {
           alert('Account deleted successfully.');
           logout();
         } else {
-          showError('account', result.error);
+          showError('account', result.error || 'Failed to delete account');
         }
       }
     }
 
-    function playGame() {
+    async function playGame() {
       if (!currentUser) return;
       
       // Store current user and redirect to game
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       
-      // In a real app, this would redirect to the actual game
-      alert(`Welcome ${currentUser.username}! Redirecting to Dice Roller game...\n\n(Note: In production, this would open dice.html with your saved data)`);
-      
-      // For demo purposes, show what would happen:
-      console.log('Game data for user:', currentUser);
-      console.log('This would load dice.html with user-specific data');
+      // Redirect to game
+      window.location.href = '/game';
     }
 
     // Check if user is already logged in
