@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dice Roller - Account System</title>
+  <style>
+    :root {
+      --bg1: #667eea;
+      --bg2: #764ba2;
+      --card: rgba(255, 255, 255, 0.95);
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      --ink: #1f2430;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .auth-container {
+      width: min(400px, 100%);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .auth-title {
+      font-weight: 950;
+      font-size: 24px;
+      margin: 0 0 20px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 14px;
+      color: rgba(31, 36, 48, 0.85);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(31, 36, 48, 0.18);
+      border-radius: 12px;
+      font: inherit;
+      background: white;
+      outline: none;
+    }
+
+    input[type="file"] {
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      box-shadow: 0 10px 22px rgba(102, 126, 234, 0.35);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      margin-bottom: 12px;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(102, 126, 234, 0.42); }
+    .btn:active { transform: translateY(0px); }
+    .btn.danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .btn.danger:hover { box-shadow: 0 14px 28px rgba(239, 68, 68, 0.42); }
+
+    .switch-mode {
+      text-align: center;
+      font-size: 14px;
+      color: rgba(31, 36, 48, 0.7);
+    }
+
+    .switch-mode a {
+      color: var(--bg1);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .switch-mode a:hover { text-decoration: underline; }
+
+    .profile-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(31, 36, 48, 0.1);
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 3px solid var(--bg1);
+    }
+
+    .profile-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-preview .placeholder {
+      font-size: 32px;
+      color: rgba(31, 36, 48, 0.5);
+    }
+
+    .hidden { display: none; }
+
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <!-- Login Form -->
+    <div id="loginForm">
+      <h2 class="auth-title">🎲 Dice Roller Login</h2>
+      
+      <div id="loginError" class="error hidden"></div>
+      <div id="loginSuccess" class="success hidden"></div>
+      
+      <div class="form-group">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" placeholder="Enter your username" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+      </div>
+      
+      <button class="btn" onclick="login()">Login</button>
+      
+      <div class="switch-mode">
+        Don't have an account? <a href="#" onclick="showRegister()">Register</a>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" class="hidden">
+      <h2 class="auth-title">🎲 Create Account</h2>
+      
+      <div id="registerError" class="error hidden"></div>
+      <div id="registerSuccess" class="success hidden"></div>
+      
+      <div class="profile-preview" id="profilePreview">
+        <div class="placeholder">👤</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="registerUsername">Username</label>
+        <input type="text" id="registerUsername" placeholder="Choose a username" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="registerPassword">Password</label>
+        <input type="password" id="registerPassword" placeholder="Choose a password" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="profilePicture">Profile Picture (optional)</label>
+        <input type="file" id="profilePicture" accept="image/*" onchange="previewProfilePicture(event)">
+      </div>
+      
+      <button class="btn" onclick="register()">Create Account</button>
+      
+      <div class="switch-mode">
+        Already have an account? <a href="#" onclick="showLogin()">Login</a>
+      </div>
+    </div>
+
+    <!-- Account Management -->
+    <div id="accountForm" class="hidden">
+      <h2 class="auth-title">👤 My Account</h2>
+      
+      <div id="accountError" class="error hidden"></div>
+      <div id="accountSuccess" class="success hidden"></div>
+      
+      <div class="profile-preview" id="currentProfilePreview">
+        <div class="placeholder">👤</div>
+      </div>
+      
+      <div class="form-group">
+        <label>Username</label>
+        <div style="padding: 10px; background: rgba(31, 36, 48, 0.05); border-radius: 8px;" id="currentUsername"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="newProfilePicture">Update Profile Picture</label>
+        <input type="file" id="newProfilePicture" accept="image/*" onchange="updateProfilePicture(event)">
+      </div>
+      
+      <button class="btn" onclick="playGame()">🎲 Play Game</button>
+      <button class="btn" onclick="logout()">Logout</button>
+      <button class="btn danger" onclick="deleteAccount()">Delete Account</button>
+    </div>
+  </div>
+
+  <script>
+    // Mock database using localStorage
+    class MockDatabase {
+      constructor() {
+        this.users = JSON.parse(localStorage.getItem('diceUsers') || '{}');
+      }
+
+      save() {
+        localStorage.setItem('diceUsers', JSON.stringify(this.users));
+      }
+
+      userExists(username) {
+        return this.users.hasOwnProperty(username);
+      }
+
+      createUser(username, password, profilePicture = null) {
+        if (this.userExists(username)) {
+          return { success: false, error: 'Username already exists' };
+        }
+
+        this.users[username] = {
+          password: this.hashPassword(password),
+          profilePicture: profilePicture,
+          createdAt: new Date().toISOString(),
+          gameData: {
+            coins: 0,
+            achievements: [],
+            ownedTracks: [],
+            // Add other game data as needed
+          }
+        };
+
+        this.save();
+        return { success: true };
+      }
+
+      authenticate(username, password) {
+        if (!this.userExists(username)) {
+          return { success: false, error: 'User not found' };
+        }
+
+        const user = this.users[username];
+        if (user.password !== this.hashPassword(password)) {
+          return { success: false, error: 'Incorrect password' };
+        }
+
+        return { success: true, user: this.sanitizeUser(user) };
+      }
+
+      updateUser(username, updates) {
+        if (!this.userExists(username)) {
+          return { success: false, error: 'User not found' };
+        }
+
+        this.users[username] = { ...this.users[username], ...updates };
+        this.save();
+        return { success: true };
+      }
+
+      deleteUser(username) {
+        if (!this.userExists(username)) {
+          return { success: false, error: 'User not found' };
+        }
+
+        delete this.users[username];
+        this.save();
+        return { success: true };
+      }
+
+      hashPassword(password) {
+        // Simple hash for demo - in production use proper hashing
+        return btoa(password + 'dice_salt');
+      }
+
+      sanitizeUser(user) {
+        const { password, ...safeUser } = user;
+        return safeUser;
+      }
+    }
+
+    const db = new MockDatabase();
+    let currentUser = null;
+    let tempProfilePicture = null;
+
+    function showRegister() {
+      hideAllForms();
+      document.getElementById('registerForm').classList.remove('hidden');
+      clearMessages();
+    }
+
+    function showLogin() {
+      hideAllForms();
+      document.getElementById('loginForm').classList.remove('hidden');
+      clearMessages();
+    }
+
+    function showAccount() {
+      hideAllForms();
+      document.getElementById('accountForm').classList.remove('hidden');
+      clearMessages();
+      displayUserInfo();
+    }
+
+    function hideAllForms() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('accountForm').classList.add('hidden');
+    }
+
+    function clearMessages() {
+      document.querySelectorAll('.error, .success').forEach(el => {
+        el.classList.add('hidden');
+        el.textContent = '';
+      });
+    }
+
+    function showError(formId, message) {
+      const errorEl = document.getElementById(formId + 'Error');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function showSuccess(formId, message) {
+      const successEl = document.getElementById(formId + 'Success');
+      successEl.textContent = message;
+      successEl.classList.remove('hidden');
+    }
+
+    function previewProfilePicture(event) {
+      const file = event.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          tempProfilePicture = e.target.result;
+          const preview = document.getElementById('profilePreview');
+          preview.innerHTML = `<img src="${e.target.result}" alt="Profile">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function updateProfilePicture(event) {
+      const file = event.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const result = db.updateUser(currentUser.username, { profilePicture: e.target.result });
+          if (result.success) {
+            currentUser.profilePicture = e.target.result;
+            displayUserInfo();
+            showSuccess('account', 'Profile picture updated!');
+          } else {
+            showError('account', result.error);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function displayUserInfo() {
+      if (!currentUser) return;
+
+      document.getElementById('currentUsername').textContent = currentUser.username;
+      
+      const preview = document.getElementById('currentProfilePreview');
+      if (currentUser.profilePicture) {
+        preview.innerHTML = `<img src="${currentUser.profilePicture}" alt="Profile">`;
+      } else {
+        preview.innerHTML = '<div class="placeholder">👤</div>';
+      }
+    }
+
+    function register() {
+      clearMessages();
+
+      const username = document.getElementById('registerUsername').value.trim();
+      const password = document.getElementById('registerPassword').value;
+
+      if (!username || !password) {
+        showError('register', 'Please fill in all fields');
+        return;
+      }
+
+      if (username.length < 3) {
+        showError('register', 'Username must be at least 3 characters');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('register', 'Password must be at least 6 characters');
+        return;
+      }
+
+      const result = db.createUser(username, password, tempProfilePicture);
+      
+      if (result.success) {
+        showSuccess('register', 'Account created successfully! Please login.');
+        setTimeout(() => {
+          showLogin();
+          // Clear form
+          document.getElementById('registerUsername').value = '';
+          document.getElementById('registerPassword').value = '';
+          document.getElementById('profilePicture').value = '';
+          tempProfilePicture = null;
+          document.getElementById('profilePreview').innerHTML = '<div class="placeholder">👤</div>';
+        }, 1500);
+      } else {
+        showError('register', result.error);
+      }
+    }
+
+    function login() {
+      clearMessages();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!username || !password) {
+        showError('login', 'Please enter username and password');
+        return;
+      }
+
+      const result = db.authenticate(username, password);
+      
+      if (result.success) {
+        currentUser = result.user;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        showSuccess('login', 'Login successful!');
+        setTimeout(() => {
+          showAccount();
+        }, 1000);
+      } else {
+        showError('login', result.error);
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      showLogin();
+      clearMessages();
+    }
+
+    function deleteAccount() {
+      if (!currentUser) return;
+
+      if (confirm('⚠️ WARNING: This will permanently delete your account and all game data. This action cannot be undone!\n\nAre you sure you want to delete your account?')) {
+        const result = db.deleteUser(currentUser.username);
+        
+        if (result.success) {
+          alert('Account deleted successfully.');
+          logout();
+        } else {
+          showError('account', result.error);
+        }
+      }
+    }
+
+    function playGame() {
+      if (!currentUser) return;
+      
+      // Store current user and redirect to game
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      
+      // In a real app, this would redirect to the actual game
+      alert(`Welcome ${currentUser.username}! Redirecting to Dice Roller game...\n\n(Note: In production, this would open dice.html with your saved data)`);
+      
+      // For demo purposes, show what would happen:
+      console.log('Game data for user:', currentUser);
+      console.log('This would load dice.html with user-specific data');
+    }
+
+    // Check if user is already logged in
+    function checkExistingLogin() {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          showAccount();
+        } catch (e) {
+          localStorage.removeItem('currentUser');
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
+    }
+
+    // Initialize
+    checkExistingLogin();
+
+    // Handle Enter key in forms
+    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    document.getElementById('registerPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') register();
+    });
+  </script>
+</body>
+</html>
