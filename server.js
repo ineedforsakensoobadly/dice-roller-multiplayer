@@ -101,9 +101,9 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password: userPassword } = req.body;
     
-    if (!username || !password) {
+    if (!username || !userPassword) {
       return res.status(400).json({ success: false, error: 'Username and password required' });
     }
     
@@ -113,7 +113,7 @@ app.post('/api/login', async (req, res) => {
     
     // Compare password
     const user = users[username];
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(userPassword, user.password);
     
     if (!passwordMatch) {
       return res.status(400).json({ success: false, error: 'Incorrect password' });
