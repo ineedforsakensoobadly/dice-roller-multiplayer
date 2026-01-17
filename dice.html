@@ -1,0 +1,2455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dice Roller</title>
+  <style>
+    :root {
+      --bg1: #667eea;
+      --bg2: #764ba2;
+      --card: rgba(255, 255, 255, 0.95);
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      --ink: #1f2430;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .currency {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+      user-select: none;
+    }
+
+    .auto-roll-toggle {
+      position: fixed;
+      top: 16px;
+      left: 180px;
+      z-index: 10;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+      user-select: none;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .auto-roll-toggle.visible {
+      display: flex;
+    }
+
+    .auto-roll-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .auto-roll-toggle label {
+      cursor: pointer;
+      margin: 0;
+      color: rgba(31, 36, 48, 0.85);
+      font-size: 12px;
+    }
+
+    .coin-icon {
+      width: 26px;
+      height: 26px;
+      display: block;
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+    }
+
+    .coin-amount {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .shop-btn {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 10;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      box-shadow: 0 10px 22px rgba(102, 126, 234, 0.35);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    .shop-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(102, 126, 234, 0.42); }
+    .shop-btn:active { transform: translateY(0px); }
+
+    #questBtn {
+      left: 90px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal.open { display: grid; }
+
+    .modal-card {
+      width: min(420px, 100%);
+      border-radius: 18px;
+      background: white;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 0;
+      background: rgba(31, 36, 48, 0.08);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+      color: rgba(31, 36, 48, 0.75);
+    }
+
+    .modal-title {
+      font-weight: 950;
+      font-size: 18px;
+      margin: 6px 0 12px;
+    }
+
+    .shop-list {
+      display: grid;
+      gap: 10px;
+      margin: 8px 0 14px;
+    }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(31, 36, 48, 0.05);
+      border: 1px solid rgba(31, 36, 48, 0.08);
+    }
+
+    .shop-item strong { display: block; }
+
+    .shop-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      color: rgba(31, 36, 48, 0.7);
+      font-size: 13px;
+    }
+
+    .shop-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .shop-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(31, 36, 48, 0.1);
+    }
+
+    .shop-tab {
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      color: rgba(31, 36, 48, 0.7);
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .shop-tab:hover {
+      color: rgba(31, 36, 48, 0.9);
+    }
+
+    .shop-tab.active {
+      color: var(--bg1);
+      border-bottom-color: var(--bg1);
+    }
+
+    .shop-content {
+      display: none;
+    }
+
+    .shop-content.active {
+      display: block;
+    }
+
+    .achievements-list {
+      display: grid;
+      gap: 10px;
+      margin: 8px 0 14px;
+    }
+
+    .achievement {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(31, 36, 48, 0.05);
+      border: 1px solid rgba(31, 36, 48, 0.08);
+    }
+
+    .achievement.unlocked {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.18));
+      border: 1px solid rgba(34, 197, 94, 0.45);
+    }
+
+    .achievement-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(31, 36, 48, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .achievement.unlocked .achievement-icon {
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: white;
+    }
+
+    .achievement-info {
+      flex: 1;
+    }
+
+    .achievement-name {
+      font-weight: 700;
+      color: rgba(31, 36, 48, 0.9);
+      margin-bottom: 4px;
+    }
+
+    .achievement-desc {
+      font-size: 13px;
+      color: rgba(31, 36, 48, 0.7);
+    }
+
+    .quest-list {
+      display: grid;
+      gap: 10px;
+      margin: 8px 0 14px;
+    }
+
+    .quest {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(31, 36, 48, 0.05);
+      border: 1px solid rgba(31, 36, 48, 0.08);
+    }
+
+    .quest.completed {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.18));
+      border: 1px solid rgba(34, 197, 94, 0.45);
+    }
+
+    .quest-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(31, 36, 48, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .quest.completed .quest-icon {
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: white;
+    }
+
+    .quest-info {
+      flex: 1;
+    }
+
+    .quest-name {
+      font-weight: 700;
+      color: rgba(31, 36, 48, 0.9);
+      margin-bottom: 4px;
+    }
+
+    .quest-desc {
+      font-size: 13px;
+      color: rgba(31, 36, 48, 0.7);
+      margin-bottom: 4px;
+    }
+
+    .quest-progress {
+      font-size: 12px;
+      color: rgba(31, 36, 48, 0.6);
+    }
+
+    .quest-reward {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(31, 36, 48, 0.8);
+    }
+
+    .dev-access {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(31, 36, 48, 0.1);
+    }
+
+    .dev-access input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(31, 36, 48, 0.2);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    }
+
+    .pet {
+      display: none;
+      margin-top: 12px;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    .pet.visible { display: grid; }
+
+    .pet-label {
+      font-weight: 950;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .pet-img {
+      width: 160px;
+      height: 160px;
+      border-radius: 18px;
+      border: 3px solid rgba(245, 197, 24, 0.95);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      user-select: none;
+      background: rgba(255, 255, 255, 0.85);
+      object-fit: cover;
+    }
+
+    .pet-img.shaking {
+      animation: petShake 500ms ease-in-out;
+    }
+
+    @keyframes petShake {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      10% { transform: translateX(-10px) rotate(-4deg); }
+      20% { transform: translateX(10px) rotate(4deg); }
+      30% { transform: translateX(-10px) rotate(-4deg); }
+      40% { transform: translateX(10px) rotate(4deg); }
+      50% { transform: translateX(-8px) rotate(-3deg); }
+      60% { transform: translateX(8px) rotate(3deg); }
+      70% { transform: translateX(-6px) rotate(-2deg); }
+      80% { transform: translateX(6px) rotate(2deg); }
+      90% { transform: translateX(-4px) rotate(-1deg); }
+    }
+
+    .result {
+      display: grid;
+      gap: 10px;
+    }
+
+    .result-title {
+      font-weight: 900;
+      letter-spacing: 0.3px;
+    }
+
+    .result-value {
+      font-size: 20px;
+      word-break: break-word;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(31, 36, 48, 0.06);
+      border: 1px solid rgba(31, 36, 48, 0.08);
+      min-height: 48px;
+      display: grid;
+      align-content: center;
+    }
+
+    .stage {
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      min-height: 320px;
+    }
+
+    .buff-icons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      min-height: 26px;
+    }
+
+    .buff-icon {
+      width: 26px;
+      height: 26px;
+      display: none;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+    }
+
+    .buff-icon.visible {
+      display: block;
+    }
+
+    .die {
+      width: 200px;
+      height: 200px;
+      border-radius: 22px;
+      background: white;
+      border: 3px solid rgba(31, 36, 48, 0.7);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      transform: translateZ(0);
+      display: grid;
+      place-items: center;
+    }
+
+    .die.bronze {
+      background: linear-gradient(135deg, #cd7f32, #8b4513);
+      border: 3px solid #654321;
+    }
+
+    .die.silver {
+      background: linear-gradient(135deg, #c0c0c0, #808080);
+      border: 3px solid #696969;
+    }
+
+    .die.bronze .pip {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .die.silver .pip {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .die.super {
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.9), rgba(138, 43, 226, 0.7));
+      border: 3px solid rgba(138, 43, 226, 0.8);
+      box-shadow: 0 18px 40px rgba(138, 43, 226, 0.4);
+    }
+
+    .die.super .pip {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+
+    .die.rolling {
+      animation: wobble 600ms ease-in-out;
+    }
+
+    @keyframes wobble {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(7deg) scale(1.02); }
+      50% { transform: rotate(-8deg) scale(0.98); }
+      75% { transform: rotate(6deg) scale(1.01); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+
+    .pip {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: rgba(31, 36, 48, 0.92);
+      position: absolute;
+    }
+
+    .pip.tl { top: 22%; left: 22%; }
+    .pip.tr { top: 22%; right: 22%; }
+    .pip.ml { top: 50%; left: 22%; transform: translateY(-50%); }
+    .pip.mr { top: 50%; right: 22%; transform: translateY(-50%); }
+    .pip.bl { bottom: 22%; left: 22%; }
+    .pip.br { bottom: 22%; right: 22%; }
+    .pip.c { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    .big-number {
+      padding: 10px 12px;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 520px;
+      background: rgba(31, 36, 48, 0.06);
+      border: 1px solid rgba(31, 36, 48, 0.08);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      word-break: break-all;
+      text-align: left;
+      color: rgba(31, 36, 48, 0.9);
+    }
+
+    .hint {
+      color: rgba(31, 36, 48, 0.72);
+      font-size: 13px;
+    }
+
+    .shop-item.bronze-dice {
+      background: rgba(139, 69, 19, 0.1);
+      border: 1px solid rgba(139, 69, 19, 0.3);
+    }
+
+    .shop-item.bronze-dice strong {
+      color: rgba(139, 69, 19, 0.9);
+    }
+
+    .shop-item.silver-dice {
+      background: rgba(192, 192, 192, 0.1);
+      border: 1px solid rgba(192, 192, 192, 0.3);
+    }
+
+    .shop-item.silver-dice strong {
+      color: rgba(128, 128, 128, 0.9);
+    }
+
+    .shop-item.super-dice {
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(138, 43, 226, 0.1));
+      border: 1px solid rgba(138, 43, 226, 0.4);
+      box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+    }
+
+    .shop-item.super-dice strong {
+      color: rgba(138, 43, 226, 0.9);
+      text-shadow: 0 1px 2px rgba(138, 43, 226, 0.5);
+    }
+
+    .dev-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: none !important;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.95) !important;
+      color: #00ff00 !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 12px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+      user-select: none;
+      border: 2px solid #00ff00 !important;
+    }
+
+    .dev-panel.open { 
+      display: flex !important; 
+    }
+
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: #f0f;
+      position: absolute;
+      animation: confetti-fall 3s linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    .dev-btn {
+      border: 1px solid #00ff00 !important;
+      background: rgba(0, 255, 0, 0.1) !important;
+      color: #00ff00 !important;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+    }
+
+    .dev-btn:hover { 
+      background: rgba(0, 255, 0, 0.2) !important; 
+    }
+
+    .app {
+      width: min(900px, 100%);
+      display: grid;
+      gap: 18px;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .panel {
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    @media (min-width: 720px) {
+      .layout { grid-template-columns: 360px 1fr; align-items: start; }
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 14px;
+      color: rgba(31, 36, 48, 0.85);
+      display: grid;
+      gap: 6px;
+    }
+
+    select, button {
+      font: inherit;
+    }
+
+    select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(31, 36, 48, 0.18);
+      padding: 10px 12px;
+      background: white;
+      outline: none;
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      box-shadow: 0 10px 22px rgba(102, 126, 234, 0.35);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(102, 126, 234, 0.42); }
+    .btn:active { transform: translateY(0px); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn.secondary {
+      background: rgba(31, 36, 48, 0.08);
+      color: rgba(31, 36, 48, 0.92);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="currency" aria-label="Coins">
+    <img class="coin-icon" src="dice-coin.png" alt="Coin" />
+    <div class="coin-amount" id="coinAmount">0</div>
+  </div>
+
+  <div class="currency" aria-label="Super Dicers" style="top: 70px; background: rgba(255, 215, 0, 0.92);">
+    <img class="coin-icon" src="super-dicer.png" alt="Super Dicer" />
+    <div class="coin-amount" id="superDicerAmount">0</div>
+  </div>
+
+  <div class="currency" aria-label="User Profile" style="top: 130px; background: rgba(255, 255, 255, 0.92);">
+    <div id="userProfile" style="display: flex; align-items: center; gap: 8px;">
+      <div id="profilePic" style="width: 26px; height: 26px; border-radius: 50%; background: rgba(31, 36, 48, 0.1); display: flex; align-items: center; justify-content: center; font-size: 12px;">👤</div>
+      <div id="username" style="font-weight: 800; font-size: 14px; color: var(--ink);">Guest</div>
+    </div>
+  </div>
+
+  <div class="auto-roll-toggle" id="autoRollToggle" aria-label="Auto roll toggle">
+    <input type="checkbox" id="autoRollCheckbox" />
+    <label for="autoRollCheckbox">Auto Roll</label>
+  </div>
+
+  <div class="dev-panel" id="devPanel" aria-label="Dev panel">
+    <div>DEV PANEL</div>
+    <button class="dev-btn" id="devMaxCoins" type="button">Set coins to 99,999,999,999</button>
+    <button class="dev-btn" id="devResetCoins" type="button">Reset points to 0</button>
+    <button class="dev-btn" id="devResetDice" type="button">Reset Progress</button>
+    <button class="dev-btn" id="devForceNA" type="button">Force N/A on next roll</button>
+    <button class="dev-btn" id="devAllAchievements" type="button">Unlock All Achievements</button>
+    <button class="dev-btn" id="devResetAchievements" type="button">Reset All Achievements</button>
+  </div>
+
+  <button class="shop-btn" id="shopBtn" type="button">Shop</button>
+  <button class="shop-btn" id="questBtn" type="button">Quests</button>
+  <div class="potion-icon" id="potionIcon" aria-label="Luck Potion Active" style="display: none;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <img src="luck-potion.png" alt="Luck Potion" style="width: 40px; height: 40px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));" />
+      <div id="potionTimer" style="font-size: 10px; font-weight: 700; color: white; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);"></div>
+    </div>
+  </div>
+  <div class="modal" id="shopModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Shop">
+      <button class="modal-close" id="shopClose" type="button" aria-label="Close">×</button>
+      <div class="modal-title">Shop</div>
+      
+      <div class="shop-tabs">
+        <button class="shop-tab active" id="shopTab" type="button">Shop</button>
+        <button class="shop-tab" id="achievementsTab" type="button">Achievements</button>
+        <button class="shop-tab" id="locationsTab" type="button">Locations</button>
+        <button class="shop-tab" id="potionsTab" type="button">Potions</button>
+      </div>
+      
+      <div class="shop-content active" id="shopContent">
+        <div class="shop-list" id="shopList"></div>
+        <div class="shop-actions">
+          <button class="btn" id="shopPlay" type="button">Play Selected</button>
+          <button class="btn secondary" id="shopStop" type="button">Stop</button>
+        </div>
+        <div class="dev-access">
+          <input type="password" id="devPassword" placeholder="Enter dev code..." maxlength="100" />
+          <button class="btn secondary" id="devUnlock" type="button">Unlock</button>
+        </div>
+      </div>
+      
+      <div class="shop-content" id="achievementsContent">
+        <div class="achievements-list" id="achievementsList"></div>
+      </div>
+      
+      <div class="shop-content" id="locationsContent">
+        <div class="locations-list" id="locationsList"></div>
+      </div>
+      
+      <div class="shop-content" id="potionsContent">
+        <div class="potions-list" id="potionsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="questModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Quests">
+      <button class="modal-close" id="questClose" type="button" aria-label="Close">×</button>
+      <div class="modal-title">Quests</div>
+      
+      <div class="quest-list" id="questList"></div>
+    </div>
+  </div>
+
+  <div class="app">
+    <header>
+      <h1>Dice Roller</h1>
+    </header>
+
+    <div class="pet" id="petContainer" aria-label="Lil god pet">
+      <div class="pet-label">lil god</div>
+      <img class="pet-img" id="petImg" src="lil-god.png" alt="lil god" />
+    </div>
+
+    <div class="layout">
+      <section class="panel controls" aria-label="Controls">
+        <label>
+          Dice mode
+          <select id="mode">
+            <option value="6">6 sides</option>
+            <option value="googol">10^100 sides</option>
+          </select>
+        </label>
+
+        <button class="btn" id="rollBtn" type="button">Roll</button>
+
+        <button class="btn" id="rebirthBtn" type="button">Rebirth (5000 coins)</button>
+
+        <div class="result" aria-live="polite">
+          <div class="result-title">Result</div>
+          <div class="result-value" id="result">Click the die (or Roll) to roll.</div>
+        </div>
+        <div class="hint">Tip: click the die too.</div>
+      </section>
+
+      <section class="panel stage" aria-label="Dice">
+        <div class="buff-icons" id="buffIcons" aria-label="Active buffs">
+          <img class="buff-icon" id="luckBuffIcon" alt="Luck buff" />
+          <img class="buff-icon" id="pointsBuffIcon" alt="Points buff" />
+        </div>
+        <div class="die" id="die" role="button" tabindex="0" aria-label="Roll the die"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Account system integration
+    class AccountSystem {
+      constructor() {
+        this.currentUser = null;
+        this.db = new MockDatabase();
+        this.checkLogin();
+      }
+
+      checkLogin() {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          try {
+            this.currentUser = JSON.parse(savedUser);
+            this.updateUserProfile();
+            this.loadUserData();
+          } catch (e) {
+            localStorage.removeItem('currentUser');
+            this.redirectToLogin();
+          }
+        } else {
+          this.redirectToLogin();
+        }
+      }
+
+      updateUserProfile() {
+        const usernameEl = document.getElementById('username');
+        const profilePicEl = document.getElementById('profilePic');
+        
+        if (this.currentUser) {
+          usernameEl.textContent = this.currentUser.username;
+          
+          if (this.currentUser.profilePicture) {
+            profilePicEl.innerHTML = `<img src="${this.currentUser.profilePicture}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+          } else {
+            profilePicEl.textContent = '👤';
+          }
+        }
+      }
+
+      loadUserData() {
+        if (!this.currentUser || !this.currentUser.gameData) return;
+        
+        const data = this.currentUser.gameData;
+        
+        // Load game data
+        if (data.coins !== undefined) setCoins(data.coins);
+        if (data.superDicers !== undefined) setSuperDicers(data.superDicers);
+        if (data.ownedTracks) ownedTracks = data.ownedTracks || [];
+        if (data.achievements) achievements = data.achievements || [];
+        if (data.selectedTrack) selectedTrack = data.selectedTrack || '';
+        
+        // Update UI
+        renderShop();
+        updatePetVisibility();
+        updateDiceAppearance();
+        updateAutoRollStatus();
+      }
+
+      saveUserData() {
+        if (!this.currentUser) return;
+        
+        this.currentUser.gameData = {
+          coins: coins,
+          superDicers: superDicers,
+          ownedTracks: ownedTracks,
+          achievements: achievements,
+          selectedTrack: selectedTrack,
+          coinRemainder: coinRemainder,
+          cursedUntil: cursedUntil,
+          hasBackground: hasBackground,
+          luckPotionUntil: luckPotionUntil,
+          questData: questData,
+          questStartTime: questStartTime
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+        
+        // Also update in database
+        this.db.updateUser(this.currentUser.username, { gameData: this.currentUser.gameData });
+      }
+
+      redirectToLogin() {
+        alert('Please login or create an account to play Dice Roller!');
+        window.location.href = 'account_system.html';
+      }
+
+      logout() {
+        this.saveUserData(); // Save before logout
+        localStorage.removeItem('currentUser');
+        this.currentUser = null;
+        window.location.href = 'account_system.html';
+      }
+    }
+
+    // Mock database (same as account system)
+    class MockDatabase {
+      constructor() {
+        this.users = JSON.parse(localStorage.getItem('diceUsers') || '{}');
+      }
+
+      save() {
+        localStorage.setItem('diceUsers', JSON.stringify(this.users));
+      }
+
+      userExists(username) {
+        return this.users.hasOwnProperty(username);
+      }
+
+      updateUser(username, updates) {
+        if (!this.userExists(username)) {
+          return { success: false, error: 'User not found' };
+        }
+
+        this.users[username] = { ...this.users[username], ...updates };
+        this.save();
+        return { success: true };
+      }
+    }
+
+    const accountSystem = new AccountSystem();
+
+    const STORAGE_KEYS = {
+      coins: 'coinAmountDice',
+      ownedTracks: 'ownedTracks',
+      selectedTrack: 'selectedTrack',
+      coinRemainder: 'coinRemainder',
+      achievements: 'achievements',
+      superDicers: 'superDicers',
+      cursedUntil: 'cursedUntil',
+      hasBackground: 'hasBackground',
+      luckPotionUntil: 'luckPotionUntil',
+      quests: 'quests',
+      questStartTime: 'questStartTime',
+      isFirstVisit: 'isFirstVisit',
+    };
+
+    function readInt(key, fallback) {
+      const raw = localStorage.getItem(key);
+      const n = Number.parseInt(raw ?? '', 10);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function readNumber(key, fallback) {
+      const raw = localStorage.getItem(key);
+      const n = Number.parseFloat(raw ?? '');
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    let coins = readInt(STORAGE_KEYS.coins, 0);
+    let coinRemainder = readNumber(STORAGE_KEYS.coinRemainder, 0);
+    let superDicers = readInt(STORAGE_KEYS.superDicers, 0);
+    let cursedUntil = readInt(STORAGE_KEYS.cursedUntil, 0);
+    let hasBackground = readInt(STORAGE_KEYS.hasBackground, 0);
+    let luckPotionUntil = readInt(STORAGE_KEYS.luckPotionUntil, 0);
+
+    const tracks = [
+      { id: '67', name: '67', src: '67.mp3', cost: 67, playable: true },
+      { id: 'lilgod', name: 'lil god', src: 'lil-god.mp3', cost: 676, playable: false, pet: true },
+      { id: 'tuffthing', name: 'tuff thing', src: 'tuff-thing.mp3', cost: 500, playable: true },
+      { id: 'bronzeDice', name: 'Bronze Dice', src: '', cost: 150, playable: false, pet: false, multiplier: 1.5, requires: [] },
+      { id: 'silverDice', name: 'Silver Dice', src: '', cost: 300, playable: false, pet: false, multiplier: 2, requires: ['bronzeDice'] },
+      { id: 'autoRoll', name: 'Auto Dice Roll', src: '', cost: 1000, playable: false, pet: false, autoRoll: true, requires: ['silverDice'] },
+      { id: 'superDice', name: 'Super Dice', src: '', cost: 3, superDiceCost: 3, multiplier: 5, requires: ['silverDice'] },
+    ];
+
+    const quests = [
+      {
+        id: 'play15Minutes',
+        name: 'Very Busy Man',
+        desc: 'Play the game for 15 minutes',
+        icon: '⏱️',
+        reward: 150,
+        type: 'time',
+        duration: 15 * 60 * 1000, // 15 minutes in milliseconds
+        completed: false,
+        accepted: false
+      }
+    ];
+
+    let questData = (() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.quests);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed || {};
+      } catch {
+        return {};
+      }
+    })();
+
+    let questStartTime = readInt(STORAGE_KEYS.questStartTime, 0);
+
+    let ownedTracks = (() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.ownedTracks);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })();
+
+    let achievements = (() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.achievements);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })();
+
+    const achievementDefs = [
+      { id: 'firstRoll', name: 'Where All Started..', desc: 'Roll the dice for the first time', icon: '🎲' },
+      { id: 'niceEarnings', name: 'Nice Earnings', desc: 'Get 1000 dices', icon: '🟩' },
+      { id: 'firstRebirth', name: 'Born Again', desc: 'Complete your first rebirth', icon: '🔄' },
+      { id: 'veryBusyMan', name: 'Very Busy Man', desc: 'Complete the 15 minute play quest', icon: '⏱️' },
+      { id: 'gamblersChance', name: 'Gamblers Chance', desc: 'Roll N/A (1 in 100,000 chance)', icon: '🎰' },
+      { id: 'welcomeBack', name: 'Welcome Back..', desc: 'Return to the game after closing', icon: 'soldier.png', isImage: true },
+    ];
+
+    let selectedTrack = localStorage.getItem(STORAGE_KEYS.selectedTrack) || '';
+    let musicAudio = null;
+    let petAudio = null;
+    let autoRollInterval = null;
+    let potionTimerInterval = null;
+    const DEV_CODE = 'D11DvbgWffhHBdwruhjSD325390S)(D)(#@IDK34fkfkm50o50opi_r-2';
+
+    const els = {
+      die: document.getElementById('die'),
+      mode: document.getElementById('mode'),
+      result: document.getElementById('result'),
+      rollBtn: document.getElementById('rollBtn'),
+      rebirthBtn: document.getElementById('rebirthBtn'),
+      coinAmount: document.getElementById('coinAmount'),
+      superDicerAmount: document.getElementById('superDicerAmount'),
+      shopBtn: document.getElementById('shopBtn'),
+      shopModal: document.getElementById('shopModal'),
+      shopClose: document.getElementById('shopClose'),
+      shopList: document.getElementById('shopList'),
+      shopPlay: document.getElementById('shopPlay'),
+      shopStop: document.getElementById('shopStop'),
+      petContainer: document.getElementById('petContainer'),
+      petImg: document.getElementById('petImg'),
+      devPanel: document.getElementById('devPanel'),
+      devMaxCoins: document.getElementById('devMaxCoins'),
+      devResetCoins: document.getElementById('devResetCoins'),
+      devResetDice: document.getElementById('devResetDice'),
+      devForceNA: document.getElementById('devForceNA'),
+      devAllAchievements: document.getElementById('devAllAchievements'),
+      devResetAchievements: document.getElementById('devResetAchievements'),
+      devPassword: document.getElementById('devPassword'),
+      devUnlock: document.getElementById('devUnlock'),
+      autoRollToggle: document.getElementById('autoRollToggle'),
+      autoRollCheckbox: document.getElementById('autoRollCheckbox'),
+      shopTab: document.getElementById('shopTab'),
+      achievementsTab: document.getElementById('achievementsTab'),
+      achievementsList: document.getElementById('achievementsList'),
+      locationsTab: document.getElementById('locationsTab'),
+      locationsList: document.getElementById('locationsList'),
+      potionsTab: document.getElementById('potionsTab'),
+      potionsList: document.getElementById('potionsList'),
+      potionIcon: document.getElementById('potionIcon'),
+      potionTimer: document.getElementById('potionTimer'),
+      buffIcons: document.getElementById('buffIcons'),
+      luckBuffIcon: document.getElementById('luckBuffIcon'),
+      pointsBuffIcon: document.getElementById('pointsBuffIcon'),
+      questBtn: document.getElementById('questBtn'),
+      questModal: document.getElementById('questModal'),
+      questClose: document.getElementById('questClose'),
+    };
+
+    function setCoins(next) {
+      coins = Math.max(0, next);
+      els.coinAmount.textContent = String(coins);
+      localStorage.setItem(STORAGE_KEYS.coins, String(coins));
+
+      if (coins >= 1000) {
+        unlockAchievement('niceEarnings');
+      }
+    }
+
+    function setSuperDicers(next) {
+      superDicers = Math.max(0, next);
+      els.superDicerAmount.textContent = String(superDicers);
+      localStorage.setItem(STORAGE_KEYS.superDicers, String(superDicers));
+    }
+
+    function setCoinRemainder(next) {
+      coinRemainder = Math.max(0, next);
+      localStorage.setItem(STORAGE_KEYS.coinRemainder, String(coinRemainder));
+    }
+
+    function getCoinMultiplier() {
+      let multiplier = 1;
+      if (isOwned('silverDice')) multiplier = 2;
+      if (isOwned('bronzeDice')) multiplier = 1.5;
+      if (isOwned('superDice')) multiplier = 5;
+      return multiplier;
+    }
+
+    function visitCultAltar() {
+      const cost = 5;
+      if (superDicers < cost) {
+        alert(`Not enough Super Dicers! You need ${cost} Super Dicers to visit the Cult Altar.`);
+        return;
+      }
+      
+      const confirmVisit = confirm(
+        `⚠️ CULT ALTAR CONFIRMATION\n\n` +
+        `This will cost you ${cost} Super Dicers and you will receive:\n` +
+        `• Permanent background change to map1.png\n` +
+        `• 5% chance of cursed dice effect (2 minutes)\n\n` +
+        `The cursed effect will prevent coin earnings from rolls.\n\n` +
+        `Are you sure you want to proceed?`
+      );
+      
+      if (!confirmVisit) return;
+      
+      setSuperDicers(superDicers - cost);
+      
+      // Set permanent background
+      setHasBackground(true);
+      
+      // 5% chance to curse the dice
+      if (Math.random() < 0.05) {
+        const curseDuration = 2 * 60 * 1000; // 2 minutes in milliseconds
+        setCursedUntil(Date.now() + curseDuration);
+        alert('⚠️ You have been CURSED! Your dice will not earn coins for 2 minutes!');
+      } else {
+        alert('🎉 The Cult Altar has blessed you! Your background has been permanently changed!');
+      }
+    }
+
+    function buySuperDice() {
+      buyTrack('superDice');
+    }
+
+    function equipSuperDice() {
+      if (!isOwned('superDice')) {
+        alert('You need to buy Super Dice first!');
+        return;
+      }
+      
+      // Equip Super Dice and unequip other dice
+      const newOwnedTracks = ownedTracks.filter(id => 
+        id !== 'bronzeDice' && 
+        id !== 'silverDice'
+      );
+      newOwnedTracks.push('superDice');
+      
+      ownedTracks = newOwnedTracks;
+      saveOwnedTracks();
+      
+      // Update UI
+      renderShop();
+      updateDiceAppearance();
+      updateAutoRollStatus();
+      
+      alert('🎲 Super Dice equipped! 5x multiplier activated!');
+    }
+
+    function awardCoins(baseCoins) {
+      // Don't award coins if cursed
+      if (isCursed()) return;
+      
+      const earned = baseCoins * getCoinMultiplier();
+      const total = coinRemainder + earned;
+      const add = Math.floor(total + 1e-9);
+      const rem = total - add;
+      if (add > 0) setCoins(coins + add);
+      setCoinRemainder(rem);
+    }
+
+    function grantMaxCoins() {
+      setCoins(99_999_999_999);
+      setCoinRemainder(0);
+    }
+
+    function resetCoins() {
+      setCoins(0);
+      setCoinRemainder(0);
+    }
+
+    function resetDice() {
+      let refund = 0;
+      let ownedItems = [];
+      
+      for (const track of tracks) {
+        if (isOwned(track.id)) {
+          refund += track.cost;
+          ownedItems.push(track.name);
+        }
+      }
+      
+      const confirmReset = confirm(
+        `⚠️ WARNING: This will reset ALL your progress!\n\n` +
+        `You will receive a refund of ${refund} coins for:\n` +
+        `• ${ownedItems.join('\n• ')}\n\n` +
+        `Your dice will return to normal and all purchases will be lost.\n\n` +
+        `Are you sure you want to continue?`
+      );
+      
+      if (!confirmReset) return;
+      
+      setCoins(coins + refund);
+      setCoinRemainder(0);
+      
+      ownedTracks = [];
+      selectedTrack = '';
+      saveOwnedTracks();
+      localStorage.removeItem(STORAGE_KEYS.selectedTrack);
+      
+      renderShop();
+      updatePetVisibility();
+      updateDiceAppearance();
+      updateAutoRollStatus();
+      stopAutoRoll();
+    }
+
+    function handleDevUnlock() {
+      const input = els.devPassword.value.trim();
+      if (input === DEV_CODE) {
+        els.devPanel.classList.remove('open');
+        setTimeout(() => {
+          els.devPanel.classList.add('open');
+        }, 10);
+        els.devPassword.value = '';
+        closeShop();
+      } else {
+        els.devPassword.value = '';
+        els.devPassword.placeholder = 'Wrong code...';
+        setTimeout(() => {
+          els.devPassword.placeholder = 'Enter dev code...';
+        }, 1500);
+      }
+    }
+
+    function saveOwnedTracks() {
+      localStorage.setItem(STORAGE_KEYS.ownedTracks, JSON.stringify(ownedTracks));
+    }
+
+    function setSelectedTrack(id) {
+      selectedTrack = id;
+      localStorage.setItem(STORAGE_KEYS.selectedTrack, id);
+    }
+
+    function isOwned(id) {
+      return ownedTracks.includes(id);
+    }
+
+    function canPurchase(track) {
+      if (!track.requires || track.requires.length === 0) return true;
+      return track.requires.every(req => isOwned(req));
+    }
+
+    function unlockAchievement(id) {
+      if (achievements.includes(id)) return;
+      achievements = [...achievements, id];
+      saveAchievements();
+      renderAchievements();
+    }
+
+    function saveAchievements() {
+      localStorage.setItem(STORAGE_KEYS.achievements, JSON.stringify(achievements));
+    }
+
+    function saveQuestData() {
+      localStorage.setItem(STORAGE_KEYS.quests, JSON.stringify(questData));
+    }
+
+    function setQuestStartTime(timestamp) {
+      questStartTime = timestamp;
+      localStorage.setItem(STORAGE_KEYS.questStartTime, String(questStartTime));
+    }
+
+    function getQuestStatus(questId) {
+      return questData[questId] || { completed: false, accepted: false };
+    }
+
+    function setQuestStatus(questId, status) {
+      questData[questId] = { ...getQuestStatus(questId), ...status };
+      saveQuestData();
+    }
+
+    function acceptQuest(questId) {
+      const quest = quests.find(q => q.id === questId);
+      if (!quest) return;
+      
+      const status = getQuestStatus(questId);
+      if (status.completed || status.accepted) return;
+      
+      setQuestStatus(questId, { accepted: true });
+      setQuestStartTime(Date.now());
+      renderQuests();
+      
+      alert(`Quest accepted: ${quest.name}!\n\n${quest.desc}\n\nReward: ${quest.reward} coins`);
+    }
+
+    function completeQuest(questId) {
+      const quest = quests.find(q => q.id === questId);
+      if (!quest) return;
+      
+      const status = getQuestStatus(questId);
+      if (status.completed) return;
+      
+      setQuestStatus(questId, { completed: true });
+      setCoins(coins + quest.reward);
+      
+      // Add achievement for completing the quest
+      if (questId === 'play15Minutes') {
+        unlockAchievement('veryBusyMan');
+      }
+      
+      renderQuests();
+      
+      alert(`🎉 Quest completed: ${quest.name}!\n\nYou earned ${quest.reward} coins!`);
+    }
+
+    function checkQuestProgress() {
+      const now = Date.now();
+      
+      for (const quest of quests) {
+        const status = getQuestStatus(quest.id);
+        
+        if (!status.accepted || status.completed) continue;
+        
+        if (quest.type === 'time' && questStartTime > 0) {
+          const elapsedTime = now - questStartTime;
+          
+          if (elapsedTime >= quest.duration) {
+            completeQuest(quest.id);
+          }
+        }
+      }
+    }
+
+    function isCursed() {
+      const now = Date.now();
+      return cursedUntil > now;
+    }
+
+    function setCursedUntil(timestamp) {
+      cursedUntil = timestamp;
+      localStorage.setItem(STORAGE_KEYS.cursedUntil, String(cursedUntil));
+    }
+
+    function setHasBackground(value) {
+      hasBackground = value;
+      localStorage.setItem(STORAGE_KEYS.hasBackground, String(hasBackground));
+      if (value) {
+        document.body.style.backgroundImage = 'url(map1.png)';
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundRepeat = 'no-repeat';
+      } else {
+        document.body.style.backgroundImage = '';
+      }
+    }
+
+    function hasLuckPotion() {
+      const now = Date.now();
+      return luckPotionUntil > now;
+    }
+
+    function setLuckPotionUntil(timestamp) {
+      luckPotionUntil = timestamp;
+      localStorage.setItem(STORAGE_KEYS.luckPotionUntil, String(luckPotionUntil));
+      updatePotionIcon();
+    }
+
+    function updatePotionIcon() {
+      const hasPotion = hasLuckPotion();
+      els.potionIcon.style.display = hasPotion ? 'block' : 'none';
+      
+      if (hasPotion) {
+        startPotionTimer();
+      } else {
+        stopPotionTimer();
+      }
+    }
+
+    function startPotionTimer() {
+      // Clear existing timer if any
+      stopPotionTimer();
+      
+      // Update timer immediately
+      updatePotionTimerDisplay();
+      
+      // Start interval to update every second
+      potionTimerInterval = setInterval(() => {
+        updatePotionTimerDisplay();
+        
+        // Hide icon if potion expired
+        if (!hasLuckPotion()) {
+          stopPotionTimer();
+          els.potionIcon.style.display = 'none';
+        }
+      }, 1000);
+    }
+
+    function stopPotionTimer() {
+      if (potionTimerInterval) {
+        clearInterval(potionTimerInterval);
+        potionTimerInterval = null;
+      }
+    }
+
+    function updatePotionTimerDisplay() {
+      const now = Date.now();
+      const timeLeft = Math.max(0, luckPotionUntil - now);
+      
+      if (timeLeft > 0) {
+        const minutes = Math.floor(timeLeft / (60 * 1000));
+        const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+        els.potionTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      } else {
+        els.potionTimer.textContent = '';
+      }
+    }
+
+    function buyLuckPotion() {
+      const cost = 1500;
+      if (coins < cost) {
+        alert('Not enough coins! You need 1500 coins for the Luck Potion.');
+        return;
+      }
+      
+      const confirmBuy = confirm(
+        `⚠️ LUCK POTION CONFIRMATION\n\n` +
+        `This will cost you ${cost} coins and you will receive:\n` +
+        `• 2x chance to roll a 6 for 20 minutes\n` +
+        `• Luck potion icon will appear next to shop button\n\n` +
+        `Are you sure you want to purchase the Luck Potion?`
+      );
+      
+      if (!confirmBuy) return;
+      
+      setCoins(coins - cost);
+      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
+      setLuckPotionUntil(Date.now() + duration);
+      
+      alert('🍀 Luck Potion activated! You now have 2x chance to roll a 6 for 20 minutes!');
+    }
+
+    function buyTrack(id) {
+      const track = tracks.find((t) => t.id === id);
+      if (!track) return;
+      if (isOwned(id)) return;
+      
+      // Check progression requirements
+      if (!canPurchase(track)) {
+        const missing = track.requires.find(req => !isOwned(req));
+        const missingTrack = tracks.find(t => t.id === missing);
+        alert(`You need to purchase ${missingTrack.name} first!`);
+        return;
+      }
+      
+      // Handle Super Dice purchase
+      if (track.superDiceCost) {
+        if (superDicers < track.superDiceCost) {
+          alert(`Not enough Super Dicers! You need ${track.superDiceCost} Super Dicers.`);
+          return;
+        }
+        setSuperDicers(superDicers - track.superDiceCost);
+      } else {
+        if (coins < track.cost) {
+          alert('Not enough coins');
+          return;
+        }
+        setCoins(coins - track.cost);
+      }
+      
+      // Only add the specific track being purchased
+      ownedTracks = [...ownedTracks.filter(trackId => trackId !== id), id];
+      saveOwnedTracks();
+      if (track.playable) setSelectedTrack(id);
+      renderShop();
+      renderLocations();
+      updatePetVisibility();
+      updateDiceAppearance();
+      updateAutoRollStatus();
+    }
+
+    function updatePetVisibility() {
+      const ownsPet = isOwned('lilgod');
+      els.petContainer.classList.toggle('visible', ownsPet);
+    }
+
+    function updateDiceAppearance() {
+      const hasBronzeDice = isOwned('bronzeDice');
+      const hasSilverDice = isOwned('silverDice');
+      const hasSuperDice = isOwned('superDice');
+      els.die.classList.toggle('bronze', hasBronzeDice);
+      els.die.classList.toggle('silver', hasSilverDice);
+      els.die.classList.toggle('super', hasSuperDice);
+    }
+
+    function startAutoRoll() {
+      if (autoRollInterval) return;
+      autoRollInterval = setInterval(() => {
+        if (!isRolling) {
+          roll();
+        }
+      }, 10000);
+    }
+
+    function stopAutoRoll() {
+      if (autoRollInterval) {
+        clearInterval(autoRollInterval);
+        autoRollInterval = null;
+      }
+    }
+
+    function updateAutoRollStatus() {
+      const ownsAutoRoll = isOwned('autoRoll');
+      els.autoRollToggle.classList.toggle('visible', ownsAutoRoll);
+      els.autoRollCheckbox.checked = ownsAutoRoll && autoRollInterval !== null;
+      
+      if (ownsAutoRoll && els.autoRollCheckbox.checked) {
+        startAutoRoll();
+      } else {
+        stopAutoRoll();
+      }
+    }
+
+    function handleAutoRollToggle() {
+      if (!isOwned('autoRoll')) return;
+      
+      if (els.autoRollCheckbox.checked) {
+        startAutoRoll();
+      } else {
+        stopAutoRoll();
+      }
+    }
+
+    function rebirth() {
+      const cost = 5000;
+      if (coins < cost) {
+        alert('Not enough coins! You need 5000 coins to rebirth.');
+        return;
+      }
+      
+      const confirmRebirth = confirm(
+        `⚠️ REBIRTH CONFIRMATION\n\n` +
+        `This will cost you ${cost} coins and you will receive:\n` +
+        `• 1 Super Dicer\n\n` +
+        `Your coins will be reduced by ${cost} but all other progress will remain.\n\n` +
+        `Are you sure you want to rebirth?`
+      );
+      
+      if (!confirmRebirth) return;
+      
+      setCoins(coins - cost);
+      setSuperDicers(superDicers + 1);
+      
+      // Unlock first rebirth achievement
+      if (!achievements.includes('firstRebirth')) {
+        unlockAchievement('firstRebirth');
+      }
+      
+      // Play rebirth sound
+      try {
+        const rebirthAudio = new Audio('minecraft_click.mp3');
+        rebirthAudio.addEventListener('error', () => {
+          console.log('Rebirth audio file not found, but continuing without sound');
+        });
+        void rebirthAudio.play().catch(() => {
+          console.log('Rebirth audio play failed, but continuing without sound');
+        });
+      } catch (e) {
+        console.log('Could not load rebirth audio, but continuing without sound');
+      }
+      
+      alert('🎉 Rebirth successful! You received 1 Super Dicer!');
+    }
+
+    function createConfetti() {
+      const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#800080'];
+      const confettiCount = 100;
+      
+      for (let i = 0; i < confettiCount; i++) {
+        setTimeout(() => {
+          const confetti = document.createElement('div');
+          confetti.className = 'confetti';
+          confetti.style.left = Math.random() * 100 + '%';
+          confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+          document.body.appendChild(confetti);
+          
+          // Remove confetti after animation
+          setTimeout(() => {
+            if (confetti.parentNode) {
+              confetti.parentNode.removeChild(confetti);
+            }
+          }, 4000);
+        }, i * 30);
+      }
+    }
+
+    function unlockAllAchievements() {
+      achievements = achievementDefs.map(a => a.id);
+      saveAchievements();
+      renderAchievements();
+      alert('🏆 All achievements unlocked!');
+    }
+
+    function resetAllAchievements() {
+      achievements = [];
+      saveAchievements();
+      renderAchievements();
+      alert('🔄 All achievements reset!');
+    }
+
+    els.devResetDice.addEventListener('click', resetDice);
+    els.devResetCoins.addEventListener('click', resetCoins);
+    els.devMaxCoins.addEventListener('click', grantMaxCoins);
+    els.devForceNA.addEventListener('click', () => {
+      forceNextRollNA = true;
+      alert('N/A will be forced on the next roll!');
+    });
+    els.devAllAchievements.addEventListener('click', unlockAllAchievements);
+    els.devResetAchievements.addEventListener('click', resetAllAchievements);
+    els.devUnlock.addEventListener('click', handleDevUnlock);
+    els.autoRollCheckbox.addEventListener('change', handleAutoRollToggle);
+    els.rebirthBtn.addEventListener('click', rebirth);
+
+    // Override save functions to sync with account system
+    const originalSetCoins = setCoins;
+    const originalSetSuperDicers = setSuperDicers;
+    const originalSaveOwnedTracks = saveOwnedTracks;
+    const originalSaveAchievements = saveAchievements;
+
+    function setCoins(next) {
+      originalSetCoins(next);
+      accountSystem.saveUserData();
+    }
+
+    function setSuperDicers(next) {
+      originalSetSuperDicers(next);
+      accountSystem.saveUserData();
+    }
+
+    function saveOwnedTracks() {
+      originalSaveOwnedTracks();
+      accountSystem.saveUserData();
+    }
+
+    function saveAchievements() {
+      originalSaveAchievements();
+      accountSystem.saveUserData();
+    }
+
+    // Add logout button to dev panel
+    function addLogoutButton() {
+      const devPanel = document.getElementById('devPanel');
+      const logoutBtn = document.createElement('button');
+      logoutBtn.className = 'dev-btn';
+      logoutBtn.textContent = 'Logout';
+      logoutBtn.onclick = () => accountSystem.logout();
+      devPanel.appendChild(logoutBtn);
+    }
+
+    // Initialize
+    setTimeout(addLogoutButton, 100);
+
+    // Initialize displays
+    els.superDicerAmount.textContent = String(superDicers);
+    
+    // Initialize background if already unlocked
+    if (hasBackground) {
+      document.body.style.backgroundImage = 'url(map1.png)';
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+    }
+
+    els.locationsTab.addEventListener('click', () => {
+      els.shopTab.classList.remove('active');
+      els.locationsTab.classList.add('active');
+      els.shopContent.style.display = 'none';
+      els.locationsContent.style.display = 'block';
+      renderLocations();
+    });
+
+    function playPet() {
+      if (!isOwned('lilgod')) return;
+      els.petImg.classList.add('shaking');
+      window.setTimeout(() => {
+        els.petImg.classList.remove('shaking');
+      }, 500);
+
+      if (petAudio) {
+        petAudio.pause();
+        petAudio.currentTime = 0;
+      }
+      try {
+        petAudio = new Audio('lil-god.mp3');
+        petAudio.addEventListener('error', () => {
+          console.log('Pet audio file not found, but continuing without sound');
+        });
+        void petAudio.play().catch(() => {
+          console.log('Audio play failed, but continuing without sound');
+        });
+      } catch (e) {
+        console.log('Could not load pet audio, but continuing without sound');
+      }
+    }
+
+    els.autoRollCheckbox.addEventListener('change', handleAutoRollToggle);
+
+    function stopMusic() {
+      if (!musicAudio) return;
+      musicAudio.pause();
+      musicAudio.currentTime = 0;
+    }
+
+    function playSelected() {
+      if (!selectedTrack) {
+        alert('Pick a track first');
+        return;
+      }
+      if (!isOwned(selectedTrack)) {
+        alert('You do not own this track');
+        return;
+      }
+      const track = tracks.find((t) => t.id === selectedTrack);
+      if (!track) return;
+      if (!track.playable) {
+        alert('This item is not playable');
+        return;
+      }
+      stopMusic();
+      try {
+        musicAudio = new Audio(track.src);
+        musicAudio.addEventListener('error', () => {
+          console.log('Music file not found, but continuing without sound');
+        });
+        musicAudio.loop = true;
+        void musicAudio.play().catch(() => {
+          console.log('Music play failed, but continuing without sound');
+        });
+      } catch (e) {
+        console.log('Could not load music, but continuing without sound');
+      }
+    }
+
+    function openShop() {
+      els.shopModal.classList.add('open');
+      els.shopModal.setAttribute('aria-hidden', 'false');
+      renderShop();
+    }
+
+    function closeShop() {
+      els.shopModal.classList.remove('open');
+      els.shopModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openQuests() {
+      els.questModal.classList.add('open');
+      els.questModal.setAttribute('aria-hidden', 'false');
+      renderQuests();
+    }
+
+    function closeQuests() {
+      els.questModal.classList.remove('open');
+      els.questModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function renderShop() {
+      els.shopList.innerHTML = '';
+      for (const track of tracks) {
+        // Only show music tracks in Shop tab (skip dice items and Super Dice)
+        if (!track.playable || track.id === 'superDice') continue;
+        
+        const row = document.createElement('div');
+        row.className = 'shop-item';
+
+        const left = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = track.name;
+        const meta = document.createElement('div');
+        meta.className = 'shop-meta';
+        
+        meta.innerHTML = `${track.cost} <img src="dice-coin.png" alt="Coin" style="width:16px;height:16px;vertical-align:-3px;" />`;
+        
+        left.appendChild(title);
+        left.appendChild(meta);
+
+        const right = document.createElement('div');
+        if (isOwned(track.id)) {
+          if (track.playable) {
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'trackPick';
+            radio.value = track.id;
+            radio.checked = selectedTrack === track.id;
+            radio.addEventListener('change', () => setSelectedTrack(track.id));
+            right.appendChild(radio);
+          } else {
+            const owned = document.createElement('div');
+            owned.style.fontWeight = '900';
+            owned.style.color = 'rgba(31, 36, 48, 0.75)';
+            owned.textContent = 'Owned';
+            right.appendChild(owned);
+          }
+        } else {
+          const buy = document.createElement('button');
+          buy.type = 'button';
+          buy.className = 'btn';
+          buy.textContent = 'Buy';
+          
+          if (coins < track.cost) {
+            buy.disabled = true;
+            buy.textContent = 'Not enough coins';
+          }
+          
+          buy.addEventListener('click', () => buyTrack(track.id));
+          right.appendChild(buy);
+        }
+
+        row.appendChild(left);
+        row.appendChild(right);
+        els.shopList.appendChild(row);
+      }
+    }
+
+    function renderAchievements() {
+      els.achievementsList.innerHTML = '';
+      for (const achievement of achievementDefs) {
+        const row = document.createElement('div');
+        row.className = 'achievement';
+        if (achievements.includes(achievement.id)) {
+          row.classList.add('unlocked');
+        }
+
+        const icon = document.createElement('div');
+        icon.className = 'achievement-icon';
+        
+        if (achievement.isImage) {
+          const img = document.createElement('img');
+          img.src = achievement.icon;
+          img.alt = achievement.name;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '8px';
+          icon.appendChild(img);
+        } else {
+          icon.textContent = achievement.icon;
+        }
+
+        const info = document.createElement('div');
+        info.className = 'achievement-info';
+
+        const name = document.createElement('div');
+        name.className = 'achievement-name';
+        name.textContent = achievement.name;
+
+        const desc = document.createElement('div');
+        desc.className = 'achievement-desc';
+        desc.textContent = achievement.desc;
+
+        info.appendChild(name);
+        info.appendChild(desc);
+
+        row.appendChild(icon);
+        row.appendChild(info);
+        els.achievementsList.appendChild(row);
+      }
+    }
+
+    function renderQuests() {
+      els.questList.innerHTML = '';
+      
+      for (const quest of quests) {
+        const status = getQuestStatus(quest.id);
+        const row = document.createElement('div');
+        row.className = 'quest';
+        if (status.completed) row.classList.add('completed');
+
+        const icon = document.createElement('div');
+        icon.className = 'quest-icon';
+        icon.textContent = quest.icon;
+
+        const info = document.createElement('div');
+        info.className = 'quest-info';
+
+        const name = document.createElement('div');
+        name.className = 'quest-name';
+        name.textContent = quest.name;
+
+        const desc = document.createElement('div');
+        desc.className = 'quest-desc';
+        desc.textContent = quest.desc;
+
+        const progress = document.createElement('div');
+        progress.className = 'quest-progress';
+        
+        if (status.completed) {
+          progress.textContent = 'Completed ✓';
+        } else if (status.accepted) {
+          if (quest.type === 'time' && questStartTime > 0) {
+            const now = Date.now();
+            const elapsed = now - questStartTime;
+            const remaining = Math.max(0, quest.duration - elapsed);
+            const minutes = Math.floor(remaining / (60 * 1000));
+            const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+            progress.textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+          } else {
+            progress.textContent = 'In progress...';
+          }
+        } else {
+          progress.textContent = 'Not started';
+        }
+
+        const reward = document.createElement('div');
+        reward.className = 'quest-reward';
+        reward.textContent = `Reward: ${quest.reward} coins`;
+
+        info.appendChild(name);
+        info.appendChild(desc);
+        info.appendChild(progress);
+        info.appendChild(reward);
+
+        const right = document.createElement('div');
+        if (status.completed) {
+          const completed = document.createElement('div');
+          completed.style.fontWeight = '900';
+          completed.style.color = 'rgba(34, 197, 94, 0.8)';
+          completed.textContent = '✓ Completed';
+          right.appendChild(completed);
+        } else if (status.accepted) {
+          const inProgress = document.createElement('div');
+          inProgress.style.fontWeight = '700';
+          inProgress.style.color = 'rgba(31, 36, 48, 0.6)';
+          inProgress.textContent = 'In Progress';
+          right.appendChild(inProgress);
+        } else {
+          const accept = document.createElement('button');
+          accept.type = 'button';
+          accept.className = 'btn';
+          accept.textContent = 'Accept';
+          accept.addEventListener('click', () => acceptQuest(quest.id));
+          right.appendChild(accept);
+        }
+
+        row.appendChild(icon);
+        row.appendChild(info);
+        row.appendChild(right);
+        els.questList.appendChild(row);
+      }
+    }
+
+    function renderLocations() {
+      els.locationsList.innerHTML = '';
+      
+      // Add dice progression items
+      for (const track of tracks) {
+        // Only show dice items (not playable, not pet, not superDice)
+        if (!track.playable && !track.pet && track.id !== 'superDice') {
+          const row = document.createElement('div');
+          row.className = 'shop-item';
+          if (track.id === 'bronzeDice') row.classList.add('bronze-dice');
+          if (track.id === 'silverDice') row.classList.add('silver-dice');
+
+          const left = document.createElement('div');
+          const title = document.createElement('strong');
+          title.textContent = track.name;
+          const meta = document.createElement('div');
+          meta.className = 'shop-meta';
+          if (track.id === 'bronzeDice') {
+            meta.innerHTML = `1.5x coins • ${track.cost} <img src="dice-coin.png" alt="Coin" style="width:16px;height:16px;vertical-align:-3px;" />`;
+          } else if (track.id === 'silverDice') {
+            meta.innerHTML = `2x coins • ${track.cost} <img src="dice-coin.png" alt="Coin" style="width:16px;height:16px;vertical-align:-3px;" /> • Requires Bronze Dice`;
+          } else if (track.id === 'autoRoll') {
+            meta.innerHTML = `Automatic rolling every 10 seconds • ${track.cost} <img src="dice-coin.png" alt="Coin" style="width:16px;height:16px;vertical-align:-3px;" /> • Requires Silver Dice`;
+          }
+          left.appendChild(title);
+          left.appendChild(meta);
+
+          const right = document.createElement('div');
+          if (isOwned(track.id)) {
+            const owned = document.createElement('div');
+            owned.style.fontWeight = '900';
+            owned.style.color = 'rgba(31, 36, 48, 0.75)';
+            owned.textContent = 'Owned';
+            right.appendChild(owned);
+          } else {
+            const buy = document.createElement('button');
+            buy.type = 'button';
+            buy.className = 'btn';
+            buy.textContent = 'Buy';
+            
+            // Disable button if requirements aren't met
+            if (!canPurchase(track)) {
+              buy.disabled = true;
+              const missing = track.requires.find(req => !isOwned(req));
+              const missingTrack = tracks.find(t => t.id === missing);
+              buy.textContent = `Requires ${missingTrack.name}`;
+            } else if (track.superDiceCost && superDicers < track.superDiceCost) {
+              buy.disabled = true;
+              buy.textContent = `Not enough Super Dicers`;
+            } else if (!track.superDiceCost && coins < track.cost) {
+              buy.disabled = true;
+              buy.textContent = 'Not enough coins';
+            }
+            
+            buy.addEventListener('click', () => buyTrack(track.id));
+            right.appendChild(buy);
+          }
+
+          row.appendChild(left);
+          row.appendChild(right);
+          els.locationsList.appendChild(row);
+        }
+      }
+      
+      // Cult Altar
+      const cultAltar = document.createElement('div');
+      cultAltar.className = 'shop-item';
+      cultAltar.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>Cult Altar</strong>
+            <div style="font-size: 12px; color: rgba(31, 36, 48, 0.7); margin-top: 4px;">
+              Come to the cult altar for permanent background and a chance of power... or curse.
+            </div>
+          </div>
+          <button class="btn" onclick="visitCultAltar()">Come to Altar (5 Super Dicers)</button>
+        </div>
+      `;
+      
+      // Super Dice
+      const superDiceItem = document.createElement('div');
+      superDiceItem.className = 'shop-item';
+      superDiceItem.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>Super Dice</strong>
+            <div style="font-size: 12px; color: rgba(31, 36, 48, 0.7); margin-top: 4px;">
+              5x coin multiplier for maximum power!
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" onclick="buySuperDice()">Buy (3 Super Dicers)</button>
+            <button class="btn" onclick="equipSuperDice()" style="background: rgba(138, 43, 226, 0.3);">Equip</button>
+          </div>
+        </div>
+      `;
+      
+      els.locationsList.appendChild(cultAltar);
+      els.locationsList.appendChild(superDiceItem);
+    }
+
+    function renderPotions() {
+      els.potionsList.innerHTML = '';
+      
+      // Luck Potion
+      const luckPotion = document.createElement('div');
+      luckPotion.className = 'shop-item';
+      luckPotion.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>🍀 Luck Potion</strong>
+            <div style="font-size: 12px; color: rgba(31, 36, 48, 0.7); margin-top: 4px;">
+              2x chance to roll a 6 for 20 minutes
+            </div>
+          </div>
+          <button class="btn" onclick="buyLuckPotion()">Buy (1500 coins)</button>
+        </div>
+      `;
+      
+      els.potionsList.appendChild(luckPotion);
+    }
+
+    function switchTab(tabName) {
+      const shopContent = document.getElementById('shopContent');
+      const achievementsContent = document.getElementById('achievementsContent');
+      const locationsContent = document.getElementById('locationsContent');
+      const potionsContent = document.getElementById('potionsContent');
+
+      if (tabName === 'shop') {
+        els.shopTab.classList.add('active');
+        els.achievementsTab.classList.remove('active');
+        els.locationsTab.classList.remove('active');
+        els.potionsTab.classList.remove('active');
+        shopContent.classList.add('active');
+        achievementsContent.classList.remove('active');
+        locationsContent.classList.remove('active');
+        potionsContent.classList.remove('active');
+      } else if (tabName === 'achievements') {
+        els.shopTab.classList.remove('active');
+        els.achievementsTab.classList.add('active');
+        els.locationsTab.classList.remove('active');
+        els.potionsTab.classList.remove('active');
+        shopContent.classList.remove('active');
+        achievementsContent.classList.add('active');
+        locationsContent.classList.remove('active');
+        potionsContent.classList.remove('active');
+        renderAchievements();
+      } else if (tabName === 'locations') {
+        els.shopTab.classList.remove('active');
+        els.achievementsTab.classList.remove('active');
+        els.locationsTab.classList.add('active');
+        els.potionsTab.classList.remove('active');
+        shopContent.classList.remove('active');
+        achievementsContent.classList.remove('active');
+        locationsContent.classList.add('active');
+        potionsContent.classList.remove('active');
+        renderLocations();
+      } else if (tabName === 'potions') {
+        els.shopTab.classList.remove('active');
+        els.achievementsTab.classList.remove('active');
+        els.locationsTab.classList.remove('active');
+        els.potionsTab.classList.add('active');
+        shopContent.classList.remove('active');
+        achievementsContent.classList.remove('active');
+        locationsContent.classList.remove('active');
+        potionsContent.classList.add('active');
+        renderPotions();
+      }
+    }
+
+    const PIPS = {
+      1: ['c'],
+      2: ['tl', 'br'],
+      3: ['tl', 'c', 'br'],
+      4: ['tl', 'tr', 'bl', 'br'],
+      5: ['tl', 'tr', 'c', 'bl', 'br'],
+      6: ['tl', 'tr', 'ml', 'mr', 'bl', 'br'],
+    };
+
+    function clearDie() {
+      els.die.innerHTML = '';
+    }
+
+    function renderPipDie(value) {
+      clearDie();
+      const layout = PIPS[value] ?? PIPS[1];
+      for (const key of layout) {
+        const pip = document.createElement('div');
+        pip.className = `pip ${key}`;
+        els.die.appendChild(pip);
+      }
+    }
+
+    function randomIntInclusive(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomGoogol() {
+      let s = String(randomIntInclusive(1, 9));
+      for (let i = 1; i < 100; i++) s += String(randomIntInclusive(0, 9));
+      return s;
+    }
+
+    let luckMultiplier = 1;
+    let pointsMultiplier = 1;
+    let rollsSinceSix = 0;
+    const MAX_LUCK_MULTIPLIER = 5;
+    const MAX_POINTS_MULTIPLIER = 32;
+
+    function initBuffIcons() {
+      els.luckBuffIcon.src = 'luck.png';
+      els.pointsBuffIcon.src = 'multi.png';
+    }
+
+    function updateBuffIcons() {
+      els.luckBuffIcon.classList.toggle('visible', luckMultiplier > 1);
+      els.pointsBuffIcon.classList.toggle('visible', pointsMultiplier > 1);
+    }
+
+    function getEffectiveCoinMultiplier() {
+      return getCoinMultiplier() * pointsMultiplier;
+    }
+
+    function resetRollSixBuffs() {
+      luckMultiplier = 1;
+      pointsMultiplier = 1;
+      rollsSinceSix = 0;
+      updateBuffIcons();
+    }
+
+    function applyRollSixBuff() {
+      luckMultiplier = Math.min(MAX_LUCK_MULTIPLIER, luckMultiplier + 1);
+      pointsMultiplier = Math.min(MAX_POINTS_MULTIPLIER, pointsMultiplier * 2);
+      rollsSinceSix = 0;
+      updateBuffIcons();
+    }
+
+    function biasedRollD6() {
+      // Check if dev panel forced N/A
+      if (forceNextRollNA) {
+        forceNextRollNA = false;
+        return 'N/A';
+      }
+      
+      // First check for the ultra-rare N/A roll (1 in 100,000 chance)
+      const naChance = 1 / 100000;
+      const r = Math.random();
+      if (r < naChance) {
+        return 'N/A';
+      }
+      
+      // Adjust remaining probability for normal dice rolls
+      const adjustedR = (r - naChance) / (1 - naChance);
+      
+      // Base chance: 5% for 6, 95% distributed equally among 1-5 (19% each)
+      let sixChance = 0.05; // 5% base chance for 6
+      
+      // Apply luck multiplier to the 6 chance
+      let totalLuckMultiplier = luckMultiplier;
+      
+      // Add luck potion bonus (2x chance for 6)
+      if (hasLuckPotion()) {
+        totalLuckMultiplier *= 2;
+      }
+      
+      sixChance = Math.min(0.9, sixChance * totalLuckMultiplier);
+      
+      if (adjustedR < sixChance) return 6;
+      
+      // For numbers 1-5, distribute the remaining probability equally
+      // Each gets (1 - sixChance) / 5 chance
+      const remainingChance = 1 - sixChance;
+      
+      const adjustedR2 = (adjustedR - sixChance) / remainingChance; // Normalize to 0-1 range for 1-5
+      const result = Math.floor(adjustedR2 * 5) + 1;
+      
+      return Math.min(5, Math.max(1, result));
+    }
+
+    let isRolling = false;
+    let lastRollAt = 0;
+    let forceNextRollNA = false;
+    const ROLL_COOLDOWN_MS = 10000;
+    function setRolling(rolling) {
+      isRolling = rolling;
+      els.rollBtn.disabled = rolling;
+      els.die.classList.toggle('rolling', rolling);
+    }
+
+    function showBigNumber(n) {
+      clearDie();
+      const box = document.createElement('div');
+      box.className = 'big-number';
+      box.textContent = n;
+      els.die.appendChild(box);
+    }
+
+    function roll() {
+      if (isRolling) return;
+
+      const now = Date.now();
+      if (now - lastRollAt < ROLL_COOLDOWN_MS) return;
+      lastRollAt = now;
+      setRolling(true);
+
+      const mode = els.mode.value;
+      const delayMs = 600;
+
+      window.setTimeout(() => {
+        if (mode === 'googol') {
+          const n = randomGoogol();
+          showBigNumber(n);
+          els.result.textContent = `Googol roll: ${n}`;
+        } else {
+          const v = biasedRollD6();
+          
+          if (v === 'N/A') {
+            showBigNumber('N/A');
+            els.result.textContent = 'You rolled: N/A';
+            
+            // Play N/A sound effect
+            try {
+              const naAudio = new Audio('NA.mp3');
+              naAudio.addEventListener('error', () => {
+                console.log('N/A audio file not found, but continuing without sound');
+              });
+              void naAudio.play().catch(() => {
+                console.log('N/A audio play failed, but continuing without sound');
+              });
+            } catch (e) {
+              console.log('Could not load N/A audio, but continuing without sound');
+            }
+            
+            // Create confetti effect
+            createConfetti();
+            
+            // Unlock the ultra-rare achievement
+            unlockAchievement('gamblersChance');
+            
+            // Give a massive reward for this incredible luck
+            awardCoins(10000 * pointsMultiplier);
+            
+            alert('🎰 JACKPOT! You rolled N/A! 🎰\n\nYou unlocked the "Gamblers Chance" achievement!\n\n+10,000 coins!');
+          } else {
+            renderPipDie(v);
+            els.result.textContent = `You rolled: ${v}`;
+            awardCoins(1 * pointsMultiplier);
+
+            // Unlock first roll achievement
+            if (!achievements.includes('firstRoll')) {
+              unlockAchievement('firstRoll');
+            }
+
+            if (v === 6) {
+              // Grant multiplayer luck potion instead of automatic potion
+              const luckDuration = 10 * 60 * 1000; // 10 minutes
+              setLuckPotionUntil(Date.now() + luckDuration);
+              
+              alert('🍀 LUCK BOOST! You rolled a 6 and received multiplayer luck potion!\n\n10 minutes of 2x chance to roll 6!');
+            } else {
+              rollsSinceSix += 1;
+              if (rollsSinceSix >= 3) {
+                resetRollSixBuffs();
+              }
+            }
+          }
+        }
+        setRolling(false);
+      }, delayMs);
+    }
+
+    els.rollBtn.addEventListener('click', roll);
+    els.die.addEventListener('click', roll);
+    els.die.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        roll();
+      }
+    });
+
+    els.shopTab.addEventListener('click', () => switchTab('shop'));
+    els.achievementsTab.addEventListener('click', () => switchTab('achievements'));
+    els.locationsTab.addEventListener('click', () => switchTab('locations'));
+    els.potionsTab.addEventListener('click', () => switchTab('potions'));
+
+    els.devUnlock.addEventListener('click', handleDevUnlock);
+    els.devPassword.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleDevUnlock();
+      }
+    });
+
+    els.devMaxCoins.addEventListener('click', grantMaxCoins);
+    els.devResetCoins.addEventListener('click', resetCoins);
+    els.devResetDice.addEventListener('click', resetDice);
+
+    els.devPanel.addEventListener('click', (e) => {
+      if (e.target === els.devPanel) {
+        els.devPanel.classList.remove('open');
+      }
+    });
+
+    els.petImg.addEventListener('click', playPet);
+    els.petImg.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        playPet();
+      }
+    });
+
+    els.shopBtn.addEventListener('click', openShop);
+    els.questBtn.addEventListener('click', openQuests);
+    els.shopClose.addEventListener('click', closeShop);
+    els.questClose.addEventListener('click', closeQuests);
+    els.shopModal.addEventListener('click', (e) => {
+      if (e.target === els.shopModal) closeShop();
+    });
+    els.questModal.addEventListener('click', (e) => {
+      if (e.target === els.questModal) closeQuests();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeShop();
+        closeQuests();
+      }
+    });
+    els.shopPlay.addEventListener('click', playSelected);
+    els.shopStop.addEventListener('click', stopMusic);
+
+    // Initialize potion icon visibility
+    updatePotionIcon();
+    
+    // Check quest progress every second
+    setInterval(checkQuestProgress, 1000);
+    
+    // Check for welcome back achievement
+    const isFirstVisit = localStorage.getItem(STORAGE_KEYS.isFirstVisit);
+    if (isFirstVisit === null) {
+      // First time visiting - set the flag
+      localStorage.setItem(STORAGE_KEYS.isFirstVisit, 'false');
+    } else if (isFirstVisit === 'false') {
+      // Player has returned - unlock welcome back achievement
+      if (!achievements.includes('welcomeBack')) {
+        unlockAchievement('welcomeBack');
+      }
+      localStorage.setItem(STORAGE_KEYS.isFirstVisit, 'true');
+    }
+  </script>
+</body>
+</html>
