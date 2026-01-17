@@ -19,5 +19,11 @@
       "source": "/api/(.*)",
       "destination": "/backend/server.js"
     }
+  ],
+  "routes": [
+    {
+      "src": "/game",
+      "dest": "/frontend/dice.html"
+    }
   ]
 }
